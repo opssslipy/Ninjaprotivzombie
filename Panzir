@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Панцирь против зомби</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Russo+One&family=Rubik:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#0b120f; --ink:#e8f4ea; --dim:#93ab9b; --lime:#58e06c; --lime-d:#1f7a39;
+  --pink:#ff4fa3; --hot:#ff4a3d; --gold:#ffd23f; --panel:rgba(9,16,12,.88); --line:#2b4337; --track:#16251e;
+  --f-display:'Russo One','Arial Black',Impact,sans-serif;
+  --f-body:'Rubik',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);overflow:hidden;overscroll-behavior:none;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#app{position:relative;width:100%;height:100%;overflow:hidden;touch-action:none;background:var(--bg)}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+#hud{position:absolute;inset:0;z-index:2;pointer-events:none;display:flex;flex-direction:column;gap:8px;
+  padding:10px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.row{display:flex;align-items:center;gap:10px;min-width:0}
+.lab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:3px;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.lab b{font:700 13px var(--f-body);letter-spacing:0;color:var(--ink);font-variant-numeric:tabular-nums}
+.hp{flex:1;min-width:0}
+.lv{width:84px;flex:none}
+.bar{height:12px;border-radius:6px;background:var(--track);overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.bar.thin{height:7px;border-radius:4px}
+.bar>i{display:block;width:100%;height:100%;transform-origin:left center;transform:scaleX(var(--v,1));background:var(--lime)}
+.hp.low .bar>i{background:var(--hot)}
+.lv .bar>i{background:var(--pink)}
+.boss .bar>i{background:var(--gold)}
+.boss.active .bar>i{background:var(--hot)}
+.boss.active .lab span{color:var(--hot)}
+#btnPause{pointer-events:auto;flex:none;width:44px;height:44px;display:grid;place-items:center;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+#btnPause:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.gear{flex-wrap:wrap;gap:6px}
+.chip{padding:5px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:12px;font-weight:500;white-space:nowrap;font-variant-numeric:tabular-nums}
+.wbar{display:flex;gap:6px;flex-wrap:wrap}
+.wbtn{pointer-events:auto;font:500 12px/1 var(--f-body);padding:10px 12px;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--ink);cursor:pointer;white-space:nowrap}
+.wbtn.on{border-color:var(--lime);color:var(--lime);box-shadow:inset 0 0 0 1px var(--lime)}
+.wbtn i{font-style:normal;margin-left:5px;color:var(--gold)}
+.wbtn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.chip.shield{border-color:#6fd8ff;color:#6fd8ff}
+.chip.rage{border-color:#ff7a2e;color:#ff7a2e}
+.chip.speed{border-color:var(--gold);color:var(--gold)}
+
+#banner{position:absolute;left:0;right:0;top:22%;z-index:3;text-align:center;pointer-events:none;
+  padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+#banner .t{font:400 clamp(30px,9vw,46px)/1.05 var(--f-display);text-transform:uppercase;color:var(--ink);text-shadow:0 3px 0 rgba(0,0,0,.6),0 0 24px rgba(88,224,108,.45);text-wrap:balance}
+#banner .s{margin-top:8px;font-size:15px;color:var(--dim);text-shadow:0 1px 6px #000}
+#banner[data-tone="boss"] .t{color:var(--hot);text-shadow:0 3px 0 rgba(0,0,0,.6),0 0 26px rgba(255,74,61,.6)}
+#banner.show{animation:pop 2.2s ease both}
+@keyframes pop{0%{opacity:0;transform:scale(.8)}12%{opacity:1;transform:scale(1.05)}22%{transform:scale(1)}85%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#banner.show{animation:none}}
+
+.screen{position:absolute;inset:0;z-index:5;display:flex;align-items:flex-end;justify-content:center;
+  padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px));
+  background:linear-gradient(180deg,rgba(7,12,9,.1) 0%,rgba(7,12,9,.5) 45%,rgba(7,12,9,.85) 100%)}
+.panel{width:min(100%,440px);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:18px;background:var(--panel);border:1px solid var(--line)}
+.logo{margin:0;font:400 clamp(38px,12vw,54px)/.95 var(--f-display);text-transform:uppercase;color:var(--lime);text-shadow:0 4px 0 var(--lime-d);text-wrap:balance}
+.logo small{display:block;margin-top:8px;font-size:.42em;letter-spacing:.08em;color:var(--pink);text-shadow:0 3px 0 #7a1d4c}
+h2.ttl{margin:0;font:400 34px/1 var(--f-display);text-transform:uppercase;color:var(--ink)}
+.how{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px;line-height:1.4;color:var(--dim)}
+.how b{color:var(--ink);font-weight:700}
+.best{margin:0;font-size:13px;color:var(--dim);text-align:center;min-height:1em}
+.btn{font:400 18px/1 var(--f-display);border:0;border-radius:14px;padding:16px 18px;cursor:pointer;color:var(--ink);background:#1d2f26;box-shadow:0 4px 0 #0c1812}
+.btn:active{transform:translateY(2px)}
+.btn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn.primary{background:var(--lime);color:#06210f;box-shadow:0 5px 0 var(--lime-d);font-size:22px;padding:18px}
+.btn.ghost{font:500 13px/1.1 var(--f-body);padding:12px 10px;background:transparent;border:1px solid var(--line);box-shadow:none;color:var(--dim)}
+.tgls{display:flex;gap:8px}
+.tgls .btn{flex:1;min-width:0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.stats b{display:block;font:400 32px/1 var(--f-display);color:var(--lime);font-variant-numeric:tabular-nums}
+.stats span{display:block;margin-top:6px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <canvas id="cv"></canvas>
+
+  <div id="hud" hidden>
+    <div class="row">
+      <div class="hp" id="hpBox">
+        <div class="lab"><span>Здоровье</span><b id="hpTxt">100</b></div>
+        <div class="bar"><i id="hpBar"></i></div>
+      </div>
+      <div class="lv">
+        <div class="lab"><span>Уровень</span><b id="lvl">1</b></div>
+        <div class="bar thin"><i id="lvlBar"></i></div>
+      </div>
+      <button id="btnPause" type="button" aria-label="Пауза">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1" fill="currentColor"/><rect x="9.5" y="2" width="3.5" height="12" rx="1" fill="currentColor"/></svg>
+      </button>
+    </div>
+    <div class="boss" id="bossBox">
+      <div class="lab"><span id="bossLabel">Босс через 4:00</span><b id="kills">Убито 0</b></div>
+      <div class="bar thin"><i id="bossBar"></i></div>
+    </div>
+    <div class="row gear">
+      <div class="wbar" id="wbar"></div>
+      <span class="chip shield" id="bShield" hidden>Щит</span>
+      <span class="chip rage" id="bRage" hidden>Ярость</span>
+      <span class="chip speed" id="bSpeed" hidden>Скорость</span>
+    </div>
+  </div>
+
+  <div id="banner" hidden><div class="t" id="bnT"></div><div class="s" id="bnS"></div></div>
+
+  <section class="screen" id="start">
+    
